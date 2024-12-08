@@ -8,6 +8,8 @@ import tn.esprit.eventsproject.entities.Event;
 import tn.esprit.eventsproject.entities.Logistics;
 import tn.esprit.eventsproject.entities.Participant;
 import tn.esprit.eventsproject.entities.Tache;
+import tn.esprit.eventsproject.exceptions.ParticipantAlreadyExistsException;
+import tn.esprit.eventsproject.exceptions.ParticipantNotFoundException;
 import tn.esprit.eventsproject.repositories.EventRepository;
 import tn.esprit.eventsproject.repositories.LogisticsRepository;
 import tn.esprit.eventsproject.repositories.ParticipantRepository;
@@ -28,13 +30,28 @@ public class EventServicesImpl implements IEventServices{
 
     @Override
     public Participant addParticipant(Participant participant) {
+        //Check if the input is not null
+        if (participant == null){
+            throw new IllegalArgumentException("Participant cannot be null");
+        }
+        //Check if the participant doesn't exist
+        if(participantRepository.findById(participant.getIdPart()).isPresent()){
+            throw new ParticipantAlreadyExistsException();
+        }
         return participantRepository.save(participant);
     }
 
     @Override
     public Event addAffectEvenParticipant(Event event, int idParticipant) {
+        if (event == null) {
+            throw new NullPointerException("Event cannot be null");
+        }
+
         Participant participant = participantRepository.findById(idParticipant).orElse(null);
-        if(participant.getEvents() == null){
+            if (participant == null) {
+            throw new ParticipantNotFoundException("Participant with ID " + idParticipant + " not found");}
+
+            if(participant.getEvents() == null){
             Set<Event> events = new HashSet<>();
             events.add(event);
             participant.setEvents(events);
@@ -46,9 +63,18 @@ public class EventServicesImpl implements IEventServices{
 
     @Override
     public Event addAffectEvenParticipant(Event event) {
+        if (event == null) {
+            throw new NullPointerException("Event cannot be null");
+        }
         Set<Participant> participants = event.getParticipants();
         for(Participant aParticipant:participants){
             Participant participant = participantRepository.findById(aParticipant.getIdPart()).orElse(null);
+
+            //Check when the participant is not found
+            if(participant == null){
+                throw new ParticipantNotFoundException("Participant with ID " + aParticipant.getIdPart() + " not found");
+            }
+
             if(participant.getEvents() == null){
                 Set<Event> events = new HashSet<>();
                 events.add(event);
@@ -102,9 +128,12 @@ public class EventServicesImpl implements IEventServices{
     public void calculCout() {
         List<Event> events = eventRepository.findByParticipants_NomAndParticipants_PrenomAndParticipants_Tache("Tounsi","Ahmed", Tache.ORGANISATEUR);
     // eventRepository.findAll();
-        float somme = 0f;
         for(Event event:events){
             log.info(event.getDescription());
+
+            // Reset somme for each event
+            float somme = 0f;
+
             Set<Logistics> logisticsSet = event.getLogistics();
             for (Logistics logistics:logisticsSet){
                 if(logistics.isReserve())
@@ -115,6 +144,7 @@ public class EventServicesImpl implements IEventServices{
             log.info("Cout de l'Event "+event.getDescription()+" est "+ somme);
 
         }
+
     }
 
 }
