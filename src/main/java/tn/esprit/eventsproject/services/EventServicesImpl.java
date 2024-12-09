@@ -180,7 +180,7 @@ public class EventServicesImpl implements IEventServices{
     @Scheduled(cron = "*/60 * * * * *")
     @Override
     public void calculCout() {
-        List<Event> events = eventRepository.findByParticipants_NomAndParticipants_PrenomAndParticipants_Tache("Tounsi", "Ahmed", Tache.ORGANISATEUR);
+        List<Event> events = eventRepository.findByParticipantsNomAndParticipantsPrenomAndParticipantsTache("Tounsi", "Ahmed", Tache.ORGANISATEUR);
         for (Event event : events) {
             log.info(event.getDescription());
 

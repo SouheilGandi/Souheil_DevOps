@@ -316,7 +316,7 @@ void testAddAffectEvenParticipant_WithExistingEvents() {
         List<Event> mockEvents = Collections.singletonList(event1);
 
         // Mock the repository to return the list of Event entities (not EventDTO)
-        Mockito.when(eventRepository.findByParticipants_NomAndParticipants_PrenomAndParticipants_Tache(
+        Mockito.when(eventRepository.findByParticipantsNomAndParticipantsPrenomAndParticipantsTache(
                         "Tounsi", "Ahmed", Tache.ORGANISATEUR))
                 .thenReturn(mockEvents);
 
@@ -349,7 +349,7 @@ void testAddAffectEvenParticipant_WithExistingEvents() {
         List<Event> mockEvents = Collections.singletonList(event1);
 
         // Mock the repository to return the list of Event entities (not EventDTO)
-        Mockito.when(eventRepository.findByParticipants_NomAndParticipants_PrenomAndParticipants_Tache(
+        Mockito.when(eventRepository.findByParticipantsNomAndParticipantsPrenomAndParticipantsTache(
                         "Tounsi", "Ahmed", Tache.ORGANISATEUR))
                 .thenReturn(mockEvents);
 
@@ -394,7 +394,7 @@ void testAddAffectEvenParticipant_WithExistingEvents() {
         List<Event> mockEvents = Arrays.asList(event1, event2);
 
         // Mock the repository to return the list of Event entities (not EventDTO)
-        Mockito.when(eventRepository.findByParticipants_NomAndParticipants_PrenomAndParticipants_Tache(
+        Mockito.when(eventRepository.findByParticipantsNomAndParticipantsPrenomAndParticipantsTache(
                         "Tounsi", "Ahmed", Tache.ORGANISATEUR))
                 .thenReturn(mockEvents);
 
@@ -415,7 +415,7 @@ void testAddAffectEvenParticipant_WithExistingEvents() {
     @Test
      void testCalculCout_WithNoEvents() {
         // Arrange
-        Mockito.when(eventRepository.findByParticipants_NomAndParticipants_PrenomAndParticipants_Tache(
+        Mockito.when(eventRepository.findByParticipantsNomAndParticipantsPrenomAndParticipantsTache(
                         "Tounsi", "Ahmed", Tache.ORGANISATEUR))
                 .thenReturn(Collections.emptyList());
 
