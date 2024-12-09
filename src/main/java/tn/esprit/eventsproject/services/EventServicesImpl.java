@@ -4,6 +4,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import tn.esprit.eventsproject.dto.EventDTO;
+import tn.esprit.eventsproject.dto.LogisticsDTO;
+import tn.esprit.eventsproject.dto.ParticipantDTO;
 import tn.esprit.eventsproject.entities.Event;
 import tn.esprit.eventsproject.entities.Logistics;
 import tn.esprit.eventsproject.entities.Participant;
@@ -27,96 +30,147 @@ public class EventServicesImpl implements IEventServices{
     private final EventRepository eventRepository;
     private final ParticipantRepository participantRepository;
     private final LogisticsRepository logisticsRepository;
+    private static final String NOTFOUND="Not Found";
 
     @Override
-    public Participant addParticipant(Participant participant) {
-        //Check if the input is not null
-        if (participant == null){
-            throw new IllegalArgumentException("Participant cannot be null");
+    public Participant addParticipant(ParticipantDTO participantDTO) {
+        if (participantDTO == null) {
+            throw new IllegalArgumentException("ParticipantDTO must not be null");
         }
-        //Check if the participant doesn't exist
-        if(participantRepository.findById(participant.getIdPart()).isPresent()){
+        // Convert DTO to entity
+        Participant participant = new Participant();
+        participant.setNom(participantDTO.getNom());
+        participant.setPrenom(participantDTO.getPrenom());
+        participant.setTache(participantDTO.getTache());
+        participant.setIdPart(participantDTO.getIdPart());
+
+        // Check if the participant already exists
+        if (participantRepository.findById(participant.getIdPart()).isPresent()) {
             throw new ParticipantAlreadyExistsException();
         }
         return participantRepository.save(participant);
     }
 
     @Override
-    public Event addAffectEvenParticipant(Event event, int idParticipant) {
-        if (event == null) {
-            throw new NullPointerException("Event cannot be null");
-        }
+    public Event addAffectEvenParticipant(EventDTO eventDTO) {
+        // Convert DTO to entity
+        Event event = new Event();
+        event.setDescription(eventDTO.getDescription());
+        event.setDateDebut(eventDTO.getDateDebut());
+        event.setDateFin(eventDTO.getDateFin());
+        event.setCout(eventDTO.getCout());
+        event.setIdEvent(eventDTO.getIdEvent());
 
-        Participant participant = participantRepository.findById(idParticipant).orElse(null);
+        Set<Participant> participants = new HashSet<>();
+        for (ParticipantDTO participantDTO : eventDTO.getParticipants()) {
+            Participant participant = participantRepository.findById(participantDTO.getIdPart()).orElse(null);
             if (participant == null) {
-            throw new ParticipantNotFoundException("Participant with ID " + idParticipant + " not found");}
-
-            if(participant.getEvents() == null){
-            Set<Event> events = new HashSet<>();
-            events.add(event);
-            participant.setEvents(events);
-        }else {
-            participant.getEvents().add(event);
+                throw new ParticipantNotFoundException("Participant with ID " + participantDTO.getIdPart() + NOTFOUND);
+            }
+            participants.add(participant);
         }
+        event.setParticipants(participants);
+
+        Set<Logistics> logistics = new HashSet<>();
+        for (LogisticsDTO logisticsDTO : eventDTO.getLogistics()) {
+            Logistics log = new Logistics();
+            log.setDescription(logisticsDTO.getDescription());
+            log.setReserve(logisticsDTO.isReserve());
+            log.setPrixUnit(logisticsDTO.getPrixUnit());
+            log.setQuantite(logisticsDTO.getQuantite());
+            log.setIdLog(logisticsDTO.getIdLog());
+            logistics.add(log);
+        }
+        event.setLogistics(logistics);
+
+
         return eventRepository.save(event);
     }
 
     @Override
-    public Event addAffectEvenParticipant(Event event) {
+    public Event addAffectEvenParticipant(EventDTO eventDTO, int idParticipant) {
+        if (eventDTO == null) {
+            throw new NullPointerException("EventDTO cannot be null");
+        }
+        //Convert DTO to entity
+        Event event = new Event();
+        event.setDescription(eventDTO.getDescription());
+        event.setDateDebut(eventDTO.getDateDebut());
+        event.setDateFin(eventDTO.getDateFin());
+        event.setCout(eventDTO.getCout());
+        event.setIdEvent(eventDTO.getIdEvent());
+
+        // Find the participant by ID
+        Participant participant = participantRepository.findById(idParticipant).orElse(null);
+        if (participant == null) {
+            throw new ParticipantNotFoundException("Participant with ID " + idParticipant + NOTFOUND);
+        }
+
+        // Add the participant to the event
+        Set<Participant> participants = new HashSet<>();
+        participants.add(participant);
+        event.setParticipants(participants);
+
+        participant.getEvents().add(event);
+
+        // Handling logistics
+        Set<Logistics> logistics = new HashSet<>();
+        if (eventDTO.getLogistics() != null) {
+            for (LogisticsDTO logisticsDTO : eventDTO.getLogistics()) {
+                Logistics log = new Logistics();
+                log.setDescription(logisticsDTO.getDescription());
+                log.setReserve(logisticsDTO.isReserve());
+                log.setPrixUnit(logisticsDTO.getPrixUnit());
+                log.setQuantite(logisticsDTO.getQuantite());
+                log.setIdLog(logisticsDTO.getIdLog());
+                logistics.add(log);
+            }
+        }
+        event.setLogistics(logistics);
+        participantRepository.save(participant);
+
+        return eventRepository.save(event);
+    }
+
+
+    @Override
+    public Logistics addAffectLog(LogisticsDTO logisticsDTO, String descriptionEvent) {
+        Event event = eventRepository.findByDescription(descriptionEvent);
         if (event == null) {
-            throw new NullPointerException("Event cannot be null");
+            throw new IllegalArgumentException("Event with description " + descriptionEvent + NOTFOUND);
         }
-        Set<Participant> participants = event.getParticipants();
-        for(Participant aParticipant:participants){
-            Participant participant = participantRepository.findById(aParticipant.getIdPart()).orElse(null);
+        //Convert DTO to entity
+        Logistics logistics = new Logistics();
+        logistics.setDescription(logisticsDTO.getDescription());
+        logistics.setReserve(logisticsDTO.isReserve());
+        logistics.setPrixUnit(logisticsDTO.getPrixUnit());
+        logistics.setQuantite(logisticsDTO.getQuantite());
 
-            //Check when the participant is not found
-            if(participant == null){
-                throw new ParticipantNotFoundException("Participant with ID " + aParticipant.getIdPart() + " not found");
-            }
-
-            if(participant.getEvents() == null){
-                Set<Event> events = new HashSet<>();
-                events.add(event);
-                participant.setEvents(events);
-            }else {
-                participant.getEvents().add(event);
-            }
+        //Add logistics to event
+        Set<Logistics> logisticsSet = event.getLogistics();
+        if (logisticsSet == null) {
+            logisticsSet = new HashSet<>();
+            event.setLogistics(logisticsSet);
         }
-        return eventRepository.save(event);
-    }
+        logisticsSet.add(logistics);
 
-    @Override
-    public Logistics addAffectLog(Logistics logistics, String descriptionEvent) {
-      Event event = eventRepository.findByDescription(descriptionEvent);
-      if(event.getLogistics() == null){
-          Set<Logistics> logisticsSet = new HashSet<>();
-          logisticsSet.add(logistics);
-          event.setLogistics(logisticsSet);
-          eventRepository.save(event);
-      }
-      else{
-          event.getLogistics().add(logistics);
-      }
         return logisticsRepository.save(logistics);
     }
 
     @Override
-    public List<Logistics> getLogisticsDates(LocalDate date_debut, LocalDate date_fin) {
-        List<Event> events = eventRepository.findByDateDebutBetween(date_debut, date_fin);
-
+    public List<Logistics> getLogisticsDates(LocalDate dateDebut, LocalDate dateFin) {
+        List<Event> events = eventRepository.findByDateDebutBetween(dateDebut, dateFin);
         List<Logistics> logisticsList = new ArrayList<>();
-        for (Event event:events){
-            if(event.getLogistics().isEmpty()){
 
-                return null;
+        for (Event event : events) {
+            if (event.getLogistics().isEmpty()) {
+                continue;
             }
 
-            else {
-                Set<Logistics> logisticsSet = event.getLogistics();
-                for (Logistics logistics:logisticsSet){
-                    if(logistics.isReserve())
-                        logisticsList.add(logistics);
+            Set<Logistics> logisticsSet = event.getLogistics();
+            for (Logistics logistics : logisticsSet) {
+                if (logistics.isReserve()) {
+                    logisticsList.add(logistics);
                 }
             }
         }
@@ -126,25 +180,23 @@ public class EventServicesImpl implements IEventServices{
     @Scheduled(cron = "*/60 * * * * *")
     @Override
     public void calculCout() {
-        List<Event> events = eventRepository.findByParticipants_NomAndParticipants_PrenomAndParticipants_Tache("Tounsi","Ahmed", Tache.ORGANISATEUR);
-    // eventRepository.findAll();
-        for(Event event:events){
+        List<Event> events = eventRepository.findByParticipants_NomAndParticipants_PrenomAndParticipants_Tache("Tounsi", "Ahmed", Tache.ORGANISATEUR);
+        for (Event event : events) {
             log.info(event.getDescription());
 
-            // Reset somme for each event
-            float somme = 0f;
+            // Reset sum for each event
+            float sum = 0f;
 
             Set<Logistics> logisticsSet = event.getLogistics();
-            for (Logistics logistics:logisticsSet){
-                if(logistics.isReserve())
-                    somme+=logistics.getPrixUnit()*logistics.getQuantite();
+            for (Logistics logistics : logisticsSet) {
+                if (logistics.isReserve()) {
+                    sum += logistics.getPrixUnit() * logistics.getQuantite();
+                }
             }
-            event.setCout(somme);
+            event.setCout(sum);
             eventRepository.save(event);
-            log.info("Cout de l'Event "+event.getDescription()+" est "+ somme);
-
+            log.info("Cout de l'Event " + event.getDescription() + " est " + sum);
         }
-
     }
 
 }
